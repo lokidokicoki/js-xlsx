@@ -5137,7 +5137,7 @@ function parse_cc_xml(data, opts) {
 			/* 18.6.2  calcChain CT_CalcChain 1 */
 			case '<calcChain': case '<calcChain>': case '</calcChain>': break;
 			/* 18.6.1  c CT_CalcCell 1 */
-			case '<c': delete y[0]; if(y.i) i = y.i; else y.i = i; d.push(y); break;
+			case '<c': delete y[0]; if(y.i) i = y.i; else y.i = i; d.push({i:y.i, r:y.r}); break;
 		}
 	});
 	return d;
@@ -11129,7 +11129,7 @@ var fix_write_opts = fix_opts_func([
 function safe_parse_wbrels(wbrels, sheets) {
 	if(!wbrels) return 0;
 	try {
-		wbrels = sheets.map(function pwbr(w) { return [w.name, wbrels['!id'][w.id].Target]; });
+		wbrels = sheets.map(function pwbr(w) { return {name:w.name, file:wbrels['!id'][w.id].Target, sheetId:w.sheetId}; });
 	} catch(e) { return null; }
 	return !wbrels || wbrels.length === 0 ? null : wbrels;
 }
@@ -11232,7 +11232,7 @@ function parse_zip(zip, opts) {
 	/* Numbers iOS hack */
 	var nmode = (getzipdata(zip,"xl/worksheets/sheet.xml",true))?1:0;
 	for(i = 0; i != props.Worksheets; ++i) {
-		if(wbrels) path = 'xl/' + (wbrels[i][1]).replace(/[\/]?xl\//, "");
+		if(wbrels) path = 'xl/' + (wbrels[i].file).replace(/[\/]?xl\//, "");
 		else {
 			path = 'xl/worksheets/sheet'+(i+1-nmode)+"." + wbext;
 			path = path.replace(/sheet0\./,"sheet.");
@@ -11242,6 +11242,9 @@ function parse_zip(zip, opts) {
 	}
 
 	if(dir.comments) parse_comments(zip, dir.comments, sheets, sheetRels, opts);
+
+	wb.Sheets = wbrels;
+
 
 	out = {
 		Directory: dir,
