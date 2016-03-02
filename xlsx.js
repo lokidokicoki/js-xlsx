@@ -5137,7 +5137,7 @@ function parse_cc_xml(data, opts) {
 			/* 18.6.2  calcChain CT_CalcChain 1 */
 			case '<calcChain': case '<calcChain>': case '</calcChain>': break;
 			/* 18.6.1  c CT_CalcCell 1 */
-			case '<c': delete y[0]; if(y.i) i = y.i; else y.i = i; d.push({i:y.i, r:y.r}); break;
+			case '<c': delete y[0]; if(y.i) i = y.i; else y.i = i; d.push({sheetId:parseInt(y.i), r:y.r}); break;
 		}
 	});
 	return d;
@@ -5856,6 +5856,7 @@ function mapper(x) { return x.map(function f2(y) { return y[1];}).join(",");}
 
 /* 2.2.2 + Magic TODO */
 function stringify_formula(formula, range, cell, supbooks, opts) {
+	console.log('sf:', formula);
 	if(opts !== undefined && opts.biff === 5) return "BIFF5??";
 	var _range = range !== undefined ? range : {s:{c:0, r:0}};
 	var stack = [], e1, e2, type, c, ixti, nameidx, r;
@@ -7271,6 +7272,7 @@ var dimregex = /"(\w*:\w*)"/;
 var colregex = /<col[^>]*\/>/g;
 /* 18.3 Worksheets */
 function parse_ws_xml(data, opts, rels) {
+	console.log('parse_ws_xml');
 	if(!data) return data;
 	/* 18.3.1.99 worksheet CT_Worksheet */
 	var s = {};
@@ -7303,7 +7305,7 @@ function parse_ws_xml(data, opts, rels) {
 	/* 18.3.1.80 sheetData CT_SheetData ? */
 	var mtch=data.match(sheetdataregex);
 	if(mtch) parse_ws_xml_data(mtch[1], s, opts, refguess);
-
+console.log('post parse:',s);
 	/* 18.3.1.48 hyperlinks CT_Hyperlinks */
 	if(data.indexOf("</hyperlinks>")!==-1) parse_ws_xml_hlinks(s, data.match(hlinkregex), rels);
 
@@ -7426,6 +7428,7 @@ function write_ws_xml_cell(cell, ref, ws, opts, idx, wb) {
 }
 
 var parse_ws_xml_data = (function parse_ws_xml_data_factory() {
+	console.log('parse_ws_xml_data');
 	var cellregex = /<(?:\w+:)?c[ >]/, rowregex = /<\/(?:\w+:)?row>/;
 	var rregex = /r=["']([^"']*)["']/, isregex = /<is>([\S\s]*?)<\/is>/;
 	var match_v = matchtag("v"), match_f = matchtag("f");
@@ -7472,7 +7475,11 @@ return function parse_ws_xml_data(sdata, s, opts, guess) {
 			p = {t:""};
 
 			if((cref=d.match(match_v))!== null && cref[1] !== '') p.v=unescapexml(cref[1]);
-			if(opts.cellFormula && (cref=d.match(match_f))!== null) p.f=unescapexml(cref[1]);
+			if(opts.cellFormula && (cref=d.match(match_f))!== null){
+				 console.log('cref:',cref);
+				 p.f=unescapexml(cref[1]);
+				 console.log('unscaped:',p.f);
+			 }
 
 			/* SCHEMA IS ACTUALLY INCORRECT HERE.  IF A CELL HAS NO T, EMIT "" */
 			if(tag.t === undefined && p.v === undefined) {
@@ -7646,6 +7653,7 @@ function parse_BrtFmlaBool(data, length, opts) {
 	var value = data.read_shift(1);
 	var o = [cell, value, 'b'];
 	if(opts.cellFormula) {
+		console.log('bobobobobo');
 		var formula = parse_XLSBCellParsedFormula(data, length-9);
 		o[3] = ""; /* TODO */
 	}
@@ -7659,6 +7667,7 @@ function parse_BrtFmlaError(data, length, opts) {
 	var value = data.read_shift(1);
 	var o = [cell, value, 'e'];
 	if(opts.cellFormula) {
+		console.log('bobobobobo');
 		var formula = parse_XLSBCellParsedFormula(data, length-9);
 		o[3] = ""; /* TODO */
 	}
@@ -7672,6 +7681,7 @@ function parse_BrtFmlaNum(data, length, opts) {
 	var value = parse_Xnum(data);
 	var o = [cell, value, 'n'];
 	if(opts.cellFormula) {
+		console.log('bobobobobo');
 		var formula = parse_XLSBCellParsedFormula(data, length - 16);
 		o[3] = ""; /* TODO */
 	}
@@ -7686,6 +7696,7 @@ function parse_BrtFmlaString(data, length, opts) {
 	var value = parse_XLWideString(data);
 	var o = [cell, value, 'str'];
 	if(opts.cellFormula) {
+		console.log('bobobobobo');
 		var formula = parse_XLSBCellParsedFormula(data, start + length - data.l);
 	}
 	else data.l = start + length;
@@ -8107,6 +8118,7 @@ function parse_wb_defaults(wb) {
 /* 18.2 Workbook */
 var wbnsregex = /<\w+:workbook/;
 function parse_wb_xml(data, opts) {
+	console.log('parse_wb_xml');
 	var wb = { AppVersion:{}, WBProps:{}, WBView:[], Sheets:[], CalcPr:{}, xmlns: "" };
 	var pass = false, xmlns = "xmlns";
 	data.match(tagregex).forEach(function xml_wb(x) {
@@ -9165,6 +9177,7 @@ function parse_xlml_xml(d, opts) {
 }
 
 function parse_xlml(data, opts) {
+	console.log('parse_xml');
 	fix_read_opts(opts=opts||{});
 	switch(opts.type||"base64") {
 		case "base64": return parse_xlml_xml(Base64.decode(data), opts);
@@ -9469,6 +9482,7 @@ function parse_workbook(blob, options) {
 					}
 				} break;
 				case 'Formula': {
+					console.log(val.val);
 					switch(val.val) {
 						case 'String': last_formula = val; break;
 						case 'Array Formula': throw "Array Formula unsupported";
@@ -9482,6 +9496,7 @@ function parse_workbook(blob, options) {
 					}
 				} break;
 				case 'String': {
+					console.log(last_formula);
 					if(last_formula) {
 						last_formula.val = val;
 						temp_val = {v:last_formula.val, ixfe:last_formula.cell.ixfe, t:'s'};
@@ -9496,6 +9511,7 @@ function parse_workbook(blob, options) {
 					array_formulae.push(val);
 				} break;
 				case 'ShrFmla': {
+					console.log('shared');
 					if(!cell_valid) break;
 					//if(options.cellFormula) out[last_cell].f = stringify_formula(val[0], range, lastcell, supbooks, opts);
 					/* TODO: capture range */
@@ -11129,7 +11145,7 @@ var fix_write_opts = fix_opts_func([
 function safe_parse_wbrels(wbrels, sheets) {
 	if(!wbrels) return 0;
 	try {
-		wbrels = sheets.map(function pwbr(w) { return {name:w.name, file:wbrels['!id'][w.id].Target, sheetId:w.sheetId}; });
+		wbrels = sheets.map(function pwbr(w) { return {name:w.name, file:wbrels['!id'][w.id].Target, sheetId:parseInt(w.sheetId)}; });
 	} catch(e) { return null; }
 	return !wbrels || wbrels.length === 0 ? null : wbrels;
 }
@@ -11211,7 +11227,10 @@ function parse_zip(zip, opts) {
 	sheets = {};
 
 	var deps = {};
+	console.log('zoom');
 	if(opts.bookDeps && dir.calcchain) deps=parse_cc(getzipdata(zip, dir.calcchain.replace(/^\//,'')),dir.calcchain,opts);
+
+	//console.log('deps:',deps);
 
 	var i=0;
 	var sheetRels = {};
@@ -11251,7 +11270,7 @@ function parse_zip(zip, opts) {
 		Workbook: wb,
 		Props: props,
 		Custprops: custprops,
-		Deps: deps,
+		CalcChain: deps,
 		Sheets: sheets,
 		SheetNames: props.SheetNames,
 		Strings: strs,
@@ -11259,6 +11278,7 @@ function parse_zip(zip, opts) {
 		Themes: themes,
 		SSF: SSF.get_table()
 	};
+	//console.log('jfhjdhjkdshjksdkhjas',out.Deps);
 	if(opts.bookFiles) {
 		out.keys = entries;
 		out.files = zip.files;
@@ -11267,6 +11287,7 @@ function parse_zip(zip, opts) {
 		if(dir.vba.length > 0) out.vbaraw = getzipdata(zip,dir.vba[0],true);
 		else if(dir.defaults.bin === 'application/vnd.ms-office.vbaProject') out.vbaraw = getzipdata(zip,'xl/vbaProject.bin',true);
 	}
+
 	return out;
 }
 function add_rels(rels, rId, f, type, relobj) {
@@ -11370,6 +11391,7 @@ function firstbyte(f,o) {
 }
 
 function read_zip(data, opts) {
+	console.log('read_zip');
 	var zip, d = data;
 	var o = opts||{};
 	if(!o.type) o.type = (has_buf && Buffer.isBuffer(data)) ? "buffer" : "base64";
@@ -11402,6 +11424,7 @@ function readSync(data, opts) {
 }
 
 function readFileSync(data, opts) {
+	console.log('fdsafdsa');
 	var o = opts||{}; o.type = 'file';
 	return readSync(data, o);
 }
